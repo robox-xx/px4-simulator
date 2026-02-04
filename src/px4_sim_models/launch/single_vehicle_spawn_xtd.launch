@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Posix SITL 环境启动脚本 -->
+    <!-- 启动 PX4 SITL 并生成车辆 -->
+    
+    <!-- 车辆位置 -->
+    <arg name="x" default="0"/>
+    <arg name="y" default="0"/>
+    <arg name="z" default="0"/>
+    <arg name="R" default="0"/>
+    <arg name="P" default="0"/>
+    <arg name="Y" default="0"/>
+    
+    <!-- 车辆模型和配置 -->
+    <arg name="est" default="ekf2"/>
+    <arg name="vehicle" default="iris"/>
+    <arg name="sdf" default="iris_2d_lidar"/>  <!-- 修改为您的模型名称 -->
+    <arg name="ID" default="0"/>
+    <arg name="ID_in_group" default="0"/>
+    
+    <env name="PX4_SIM_MODEL" value="$(arg vehicle)" />
+    <env name="PX4_ESTIMATOR" value="$(arg est)" />
+    
+    <arg name="mavlink_udp_port" default="14560"/>
+    <arg name="mavlink_tcp_port" default="4560"/>
+    <arg name="udp_gimbal_port" default="13030"/>
+    
+    <param name="robotNamespace" value="$(arg vehicle)_$(arg ID)"/>
+    
+    <!-- PX4 配置 -->
+    <arg name="interactive" default="true"/>
+    
+    <!-- 生成 sdf 车辆模型 -->
+    <!-- 修改这一行：将 $(find px4) 替换为 $(find px4_sim_models) -->
+    <arg name="cmd" default="xmlstarlet ed 
+        -d '//plugin[@name=&quot;gimbal_controller&quot;]/udp_gimbal_port_remote' 
+        -s '//plugin[@name=&quot;gimbal_controller&quot;]' 
+        -t elem -n udp_gimbal_port_remote -v $(arg udp_gimbal_port) 
+        -d '//plugin[@name=&quot;mavlink_interface&quot;]/mavlink_tcp_port' 
+        -s '//plugin[@name=&quot;mavlink_interface&quot;]' 
+        -t elem -n mavlink_tcp_port -v $(arg mavlink_tcp_port)
+        $(find px4_sim_models)/models/$(arg sdf)/$(arg sdf).sdf"/>
+    
+    <param command="$(arg cmd)" name="model_description"/>
+    
+    <!-- PX4 SITL -->
+    <!-- 注意：如果您没有安装 PX4，这部分需要修改或删除 -->
+    <arg unless="$(arg interactive)" name="px4_command_arg1" value=""/>
+    <arg if="$(arg interactive)" name="px4_command_arg1" value="-d"/>
+    
+    <!-- 如果您没有 px4 包，可以注释掉下面的 node 或者修改为使用其他方式 -->
+    <!-- 方案1：注释掉 PX4 SITL（如果您不需要 PX4 仿真） -->
+
+    <!-- <node name="sitl_$(arg ID)" pkg="px4" type="px4" output="screen" 
+          args="$(find px4)/build/px4_sitl_default/etc -s etc/init.d-posix/rcS -i $(arg ID) -w sitl_$(arg vehicle)_$(arg ID) $(arg px4_command_arg1)">
+    </node> -->
+    
+    <!-- 方案2：如果您希望保留 PX4 SITL，需要先安装 PX4 -->
+    <!-- 或者，如果您不需要修改模型，可以直接生成模型而不使用 xmlstarlet -->
+    
+    <!-- 生成车辆 -->
+    <node name="$(arg vehicle)_$(arg ID)_spawn" output="screen" 
+          pkg="gazebo_ros" type="spawn_model" 
+          args="-sdf -param model_description -model $(arg vehicle)_$(arg ID_in_group) 
+                -x $(arg x) -y $(arg y) -z $(arg z) 
+                -R $(arg R) -P $(arg P) -Y $(arg Y)"/>
+</launch>

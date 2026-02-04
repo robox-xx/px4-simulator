@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<launch>
+      <!-- 生成障碍物的脚本 -->
+    <node name="world_gen_node" pkg="px4_sim_models" type="test.py" output="screen" />
+      <!-- 打开地图 -->
+    <arg name="world" default="$(find px4_sim_models)/worlds/test.world" />
+
+    <env name="GAZEBO_MODEL_PATH" value="$(find px4_sim_models)/models:$(optenv GAZEBO_MODEL_PATH)" />
+    <env name="GAZEBO_RESOURCE_PATH" value="$(find px4_sim_models)/worlds:$(optenv GAZEBO_RESOURCE_PATH)" />
+    <!-- gazebo configs -->
+    <arg name="gui" default="true"/>
+    <arg name="debug" default="false"/>
+    <arg name="verbose" default="false"/>
+    <arg name="paused" default="false"/>
+    <!-- Gazebo sim -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="world_name" value="$(arg world)"/>
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="verbose" value="$(arg verbose)"/>
+        <arg name="paused" value="$(arg paused)"/>
+    </include>
+     
+     <!-- iris_0 -->
+     <group ns="iris_0">
+        <!-- MAVROS and vehicle configs -->
+            <arg name="ID" value="0"/>
+            <arg name="ID_in_group" value="0"/>
+            <arg name="fcu_url" default="udp://:24540@localhost:34580"/>
+        <!-- PX4 SITL and vehicle spawn -->
+        <include file="$(find px4_sim_models)/launch/single_vehicle_spawn_xtd.launch">
+            <arg name="x" value="0"/>
+            <arg name="y" value="0"/>
+            <arg name="z" value="0.5"/>
+            <arg name="R" value="0"/>
+            <arg name="P" value="0"/>
+            <arg name="Y" value="0"/>
+            <arg name="vehicle" value="iris"/>
+            <arg name="sdf" value="iris_mid360"/>
+            <arg name="mavlink_udp_port" value="18570"/>
+            <arg name="mavlink_tcp_port" value="4560"/>
+            <arg name="ID" value="$(arg ID)"/>
+            <arg name="ID_in_group" value="$(arg ID_in_group)"/>
+        </include>
+        <!-- MAVROS -->
+        <include file="$(find mavros)/launch/px4.launch">
+            <arg name="fcu_url" value="$(arg fcu_url)"/>
+            <arg name="gcs_url" value=""/>
+            <arg name="tgt_system" value="$(eval 1 + arg('ID'))"/>
+            <arg name="tgt_component" value="1"/>
+        </include>
+    </group>
+    
+    <node pkg="tf2_ros" type="static_transform_publisher" name="world_to_map" 
+      args="0 0 0 0 0 0 1 world map" />
+      <!-- 无人机导入 -->
+    <!-- <node name="spawn_iris" pkg="gazebo_ros" type="spawn_model" output="screen"
+          args="-sdf -file $(find px4_sim_models)/models/iris_3d_lidar/iris_3d_lidar.sdf 
+                -model iris -x 0 -y 0 -z 0.5" 
+          launch-prefix="bash -c 'sleep 8; $0 $@' " /> -->
+      <!-- mavros端口配置 -->
+    <!-- <include file="$(find mavros)/launch/px4.launch">
+        <arg name="fcu_url" value="udp://:14540@127.0.0.1:14557" />
+    </include> -->
+      <!-- 打开rviz -->
+    <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find px4_sim_models)/rviz/rviz.rviz" /> -->
+
+</launch>
